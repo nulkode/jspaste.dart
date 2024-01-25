@@ -1,7 +1,7 @@
 name: jspaste
 description: A library to interact with the JSPaste API.
 version: 0.0.1
-# repository: https://github.com/my_org/my_repo
+repository: https://github.com/nulkode/jspaste.dart
 
 environment:
   sdk: ^3.1.4
