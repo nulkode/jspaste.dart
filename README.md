@@ -1,4 +1,8 @@
-# jspaste.dart
+<img src="https://github.com/nulkode/jspaste.dart/assets/48804489/0fda9d97-acc2-4727-b952-ff2c6939daa6" alt="jspaste.dart banner" width="80%"/>
+
+[![Pub Version](https://img.shields.io/pub/v/jspaste)](https://pub.dev/packages/jspaste)
+[![Dart Version](https://img.shields.io/badge/dart-%3E%3D3.1.4-blue)](https://dart.dev)
+[![License](https://img.shields.io/github/license/nulkode/jspaste.dart)](https://opensource.org/license/mit/)
 
 This is a Dart library for interacting with the JSPaste API. It provides a simple way to create, retrieve, update, and delete documents on JSPaste.
 
@@ -8,7 +12,7 @@ Add `jspaste` to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  jspaste: ^1.0.0
+  jspaste: ^0.0.1
 ```
 
 Then run `dart pub get`.
