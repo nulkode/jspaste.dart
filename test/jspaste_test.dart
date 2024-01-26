@@ -12,7 +12,8 @@ void main() {
     test('getDocumentById should throw Exception for non-existent document',
         () async {
       await expectLater(
-        () => jspasteClient.getDocumentById('nonexistent-idajsdhkahdkjahs', null),
+        () =>
+            jspasteClient.getDocumentById('nonexistent-idajsdhkahdkjahs', null),
         throwsA(isA<Exception>()),
       );
     });

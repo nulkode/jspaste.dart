@@ -34,7 +34,8 @@ class JSPasteClient {
       return Document(data, key);
     } else if ((response.statusCode == 400 ||
             response.statusCode == 401 ||
-            response.statusCode == 404) && // TODO: waiting until backend is fixed
+            response.statusCode ==
+                404) && // TODO: waiting until backend is fixed
         responseBody.containsKey('errorCode')) {
       final errorMessage = getErrorMessage(responseBody['errorCode']);
       throw Exception(errorMessage);
