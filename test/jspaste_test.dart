@@ -12,21 +12,21 @@ void main() {
     test('getDocumentById should throw Exception for non-existent document',
         () async {
       await expectLater(
-        () =>
-            jspasteClient.getDocumentById('nonexistent-idajsdhkahdkjahs', null),
+        () => jspasteClient.getDocumentById('nonexistent-idajsdhkahdkjahs'),
         throwsA(isA<Exception>()),
       );
     });
 
     test('createDocument should throw Exception for empty text', () async {
       expect(
-        () => jspasteClient.createDocument('', null),
+        () => jspasteClient.createDocument(''),
         throwsA(isA<Exception>()),
       );
     });
 
     test('createDocument should return Document for valid input', () async {
-      final document = await jspasteClient.createDocument('Sample text', null);
+      final document = await jspasteClient.createDocument('Sample text',
+          password: 'password', expiration: 24 * 60 * 60 * 1000);
       expect(document, isA<Document>());
       expect(document.text, 'Sample text');
       expect(document.id, isNotNull);

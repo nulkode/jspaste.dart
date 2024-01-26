@@ -7,12 +7,13 @@ void main() async {
   try {
     // Create a new document
     Document createdDocument = await client.createDocument(
-        'Hello, this is a test document!', 'document_password');
+        'Hello, this is a test document!',
+        password: 'document_password');
     print('Document created with ID: ${createdDocument.id}');
 
     // Get the document by its ID
-    Document retrievedDocument =
-        await client.getDocumentById(createdDocument.id!, 'document_password');
+    Document retrievedDocument = await client
+        .getDocumentById(createdDocument.id!, password: 'document_password');
     print('Retrieved document: ${retrievedDocument.text}');
 
     // Update the document
