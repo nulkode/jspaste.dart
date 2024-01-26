@@ -23,7 +23,7 @@ class JSPasteClient {
   /// Get a [Document] by its [id].
   ///
   /// [password] is the password for the document. Default is `null`.
-  Future<Document> getDocumentById(String id, String? password) async {
+  Future<Document> getDocumentById(String id, {String? password}) async {
     final uri = Uri.parse(joinURL(URL, 'documents/$id'));
 
     final response = await http.get(uri, headers: {'Password': password ?? ''});
@@ -47,8 +47,10 @@ class JSPasteClient {
   /// Create a new [Document] with [text].
   ///
   /// [password] is the password for the document. Default is `null`.
+  /// [expiration] is the expiration time for the document in milliseconds. Default is no expiration.
   /// A secret key is required for this operation. You can set it with [setSecret]. If there is no secret key, one will be generated for you and set in the client.
-  Future<Document> createDocument(String text, String? password) async {
+  Future<Document> createDocument(String text,
+      {String? password, int? expiration}) async {
     if (text == '') throw Exception('Text cannot be empty.');
 
     final uri = Uri.parse(joinURL(URL, 'documents'));
@@ -56,6 +58,7 @@ class JSPasteClient {
         headers: {
           'Password': password ?? '',
           'Secret': _secret ?? '',
+          'Expiration': expiration?.toString() ?? '',
           'Content-Type': 'application/octet-stream'
         },
         body: text);
