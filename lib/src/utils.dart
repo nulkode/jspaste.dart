@@ -1,14 +1,13 @@
 import 'constants.dart';
 
-String getErrorMessage(JSPErrorCode errorCode) {
-  // check if the error code is in the enum
-  if (JSPErrorCode.values.contains(errorCode)) {
-    // return the error message
-    return errorCode.message;
-  } else {
-    // return the error message for unknown error
-    return 'Unknown error.';
-  }
+String getErrorMessage(String errorCode) {
+  // find the JSPErrorCode by errorCode
+  final error = JSPErrorCode.values.firstWhere(
+    (element) => element.string == errorCode
+  );
+
+  // return the error message
+  return error.message;
 }
 
 String joinURL(String url, String url2) {
