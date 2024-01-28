@@ -3,17 +3,22 @@ const String MainAPIURL = // ignore: constant_identifier_names
     'https://jspaste.eu/api/v2/';
 
 enum JSPErrorCode {
-  invalidInput(
-      'jsp.invalid_input', 'Invalid input. Maybe the ID is not alphanumeric?'),
-  fileNotFound('jsp.file_not_found', 'File not found.'),
-  invalidPassword('jsp.invalid_password', 'Invalid password.'),
-  documentExpired('jsp.document_expired', 'Document expired.'),
-  invalidFileLength('jsp.invalid_file_length', 'Invalid file length.'),
-  invalidSecret('jsp.invalid_secret', 'Invalid secret.'),
-  invalidSecretLength('jsp.invalid_secret_length', 'Invalid secret length.'),
-  invalidPasswordLength(
-      'jsp.invalid_password_length', 'Invalid password length.'),
-  ;
+  inputInvalid('jsp.input.invalid', 'The input is invalid.'),
+  documentNotFound('jsp.document.not_found', 'The document was not found.'),
+  documentPasswordNeeded(
+      'jsp.document.needs_password', 'The document needs a password.'),
+  documentInvalidPasswordLength('jsp.document.invalid_password_length',
+      'The password length is invalid.'),
+  documentInvalidPassword('jsp.document.invalid_password',
+      'The password is invalid.'),
+  documentInvalidLength(
+      'jsp.document.invalid_length', 'The document length is invalid. Maybe it is too long?'),
+  documentInvalidSecret('jsp.document.invalid_secret',
+      'The secret is invalid.'),
+  documentInvalidSecretLength('jsp.document.invalid_secret_length',
+      'The secret length is invalid.');
+  
+  
 
   final String string;
   final String message;

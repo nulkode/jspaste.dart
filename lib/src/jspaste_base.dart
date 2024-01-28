@@ -32,11 +32,9 @@ class JSPasteClient {
       final key = responseBody['key'];
       final data = responseBody['data'];
       return Document(data, key);
-    } else if ((response.statusCode == 400 ||
-            response.statusCode == 401 ||
-            response.statusCode ==
-                404) && // TODO: waiting until backend is fixed
-        responseBody.containsKey('errorCode')) {
+    } else if (response.statusCode == 400 ||
+        response.statusCode == 401 ||
+        response.statusCode == 404) {
       final errorMessage = getErrorMessage(responseBody['errorCode']);
       throw Exception(errorMessage);
     } else {
@@ -47,7 +45,7 @@ class JSPasteClient {
   /// Create a new [Document] with [text].
   ///
   /// [password] is the password for the document. Default is `null`.
-  /// [expiration] is the expiration time for the document in milliseconds. Default is no expiration.
+  /// [expiration] is the expiration time for the document in seconds. Default is no expiration.
   /// A secret key is required for this operation. You can set it with [setSecret]. If there is no secret key, one will be generated for you and set in the client.
   Future<Document> createDocument(String text,
       {String? password, int? expiration}) async {
@@ -58,7 +56,7 @@ class JSPasteClient {
         headers: {
           'Password': password ?? '',
           'Secret': _secret ?? '',
-          'Expiration': expiration?.toString() ?? '',
+          'Lifetime': expiration?.toString() ?? '0',
           'Content-Type': 'application/octet-stream'
         },
         body: text);
