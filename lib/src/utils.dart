@@ -3,14 +3,15 @@ import 'constants.dart';
 String getErrorMessage(String errorCode) {
   // find the JSPErrorCode by errorCode
   final error = JSPErrorCode.values.firstWhere(
-    (element) => element.string == errorCode
+    (element) => element.string == errorCode,
+    orElse: () => JSPErrorCode.unknown,
   );
 
   // return the error message
   return error.message;
 }
 
-String joinURL(String url, String url2) {
+Uri joinUrl(String url, String url2) {
   // remove trailing slash from url
   if (url.endsWith('/')) {
     url = url.substring(0, url.length - 1);
@@ -22,11 +23,11 @@ String joinURL(String url, String url2) {
   }
 
   // return the joined url
-  final joinedURL = '$url/$url2';
+  final joinedUrl = '$url/$url2';
 
   // check if the url is valid
-  if (Uri.parse(joinedURL).isAbsolute) {
-    return joinedURL;
+  if (Uri.parse(joinedUrl).isAbsolute) {
+    return Uri(path: joinedUrl);
   } else {
     throw Exception('Invalid URL.');
   }

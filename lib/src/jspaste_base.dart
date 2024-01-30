@@ -5,144 +5,253 @@ import 'utils.dart';
 
 /// The JSPaste client class. Create one to start interacting with the API!
 class JSPasteClient {
-  String? _secret;
-
-  /// The API base URL.
+  /// The API base url.
   ///
   /// Example: `https://jspaste.eu/api/v2/`
-  String URL = MainAPIURL; // ignore: non_constant_identifier_names
+  String url = mainApiUrl; // ignore: non_constant_identifier_names
 
   /// Create a new JSPaste client.
   ///
-  /// [secret] is the secret key for the API.
-  /// [url] is the API base URL. Default is [MainAPIURL].
-  JSPasteClient({String? secret, String? url}) {
-    if (secret != null) _secret = secret;
+  /// [url] is the API base url. Default is [mainApiUrl].
+  JSPasteClient({String? url}) {
+    if (url != null) this.url = url;
   }
 
-  /// Get a [Document] by its [id].
+  /// Publish a [Document] to the JSPaste API.
   ///
-  /// [password] is the password for the document. Default is `null`.
-  Future<Document> getDocumentById(String id, {String? password}) async {
-    final uri = Uri.parse(joinURL(URL, 'documents/$id'));
+  /// The document must not be published already.
+  /// Returns the published [Document] including the document key, secret and url.
+  Future<Document> publishDocument(Document document) async {
+    if (await document.isPublished) {
+      throw Exception('Document is already published.');
+    }
 
-    final response = await http.get(uri, headers: {'Password': password ?? ''});
+    final uri = joinUrl(mainApiUrl, 'documents');
+
+    final response = await http.post(uri, body: document.text, headers: {
+      'Secret': document.secret ?? '',
+      'Password': document.password ?? '',
+      'Lifetime': (document.expiresAt != null
+              ? (document.expiresAt!.millisecondsSinceEpoch / 1000).toString()
+              : null) ??
+          '',
+    });
+
     final responseBody = jsonDecode(response.body);
-    if (response.statusCode == 200) {
-      final key = responseBody['key'];
-      final data = responseBody['data'];
-      return Document(data, key);
-    } else if (response.statusCode == 400 ||
-        response.statusCode == 401 ||
-        response.statusCode == 404) {
+
+    if (response.statusCode != 200) {
       final errorMessage = getErrorMessage(responseBody['errorCode']);
       throw Exception(errorMessage);
-    } else {
-      throw Exception('Unknown error while getting document.');
     }
+
+    responseBody['text'] = document.text;
+
+    Document newDocument = Document._fromJson(responseBody);
+
+    return newDocument;
   }
 
-  /// Create a new [Document] with [text].
+  /// Get a [Document] from the JSPaste API.
   ///
-  /// [password] is the password for the document. Default is `null`.
-  /// [expiration] is the expiration time for the document in seconds. Default is no expiration.
-  /// A secret key is required for this operation. You can set it with [setSecret]. If there is no secret key, one will be generated for you and set in the client.
-  Future<Document> createDocument(String text,
-      {String? password, int? expiration}) async {
-    if (text == '') throw Exception('Text cannot be empty.');
+  /// [key] is the document ID.
+  /// [password] is the document password if the document is password protected.
+  Future<Document> getDocument(String key, {String? password}) async {
+    final uri = joinUrl(mainApiUrl, 'documents/$key');
 
-    final uri = Uri.parse(joinURL(URL, 'documents'));
-    final response = await http.post(uri,
-        headers: {
-          'Password': password ?? '',
-          'Secret': _secret ?? '',
-          'Lifetime': expiration?.toString() ?? '0',
-          'Content-Type': 'application/octet-stream'
-        },
-        body: text);
-    if (response.statusCode == 200) {
-      final responseBody = jsonDecode(response.body);
-      final key = responseBody['key'];
-      final secret = responseBody['secret'];
-      if (_secret == null || _secret == '') _secret = secret;
+    final response = await http.get(uri);
 
-      return Document(text, key);
-    } else if (response.statusCode == 400) {
-      final responseBody = jsonDecode(response.body);
+    final responseBody = jsonDecode(response.body);
+
+    if (response.statusCode != 200) {
       final errorMessage = getErrorMessage(responseBody['errorCode']);
-
       throw Exception(errorMessage);
-    } else {
-      print(response.body);
-      print(response.statusCode);
-      throw Exception('Unknown error while creating document.');
     }
+
+    responseBody['text'] = responseBody['text'];
+
+    Document document = Document._fromJson(responseBody);
+
+    return document;
   }
 
-  /// Update a [Document] with [text].
-  ///
-  /// [secret] must be the same as the one used to create the document. You can set it with [setSecret].
-  Future<Document> updateDocument(String id, String text) async {
-    if (text == '') throw Exception('Text cannot be empty.');
-    if (_secret == null || _secret == '') {
-      throw Exception('Secret key is required for this operation.');
-    }
+  /// Check if a document exists by [key] by pinging the API.
+  Future<bool> documentExists(String key) async {
+    final uri = joinUrl(mainApiUrl, 'documents/$key/exists');
 
-    final uri = Uri.parse(joinURL(URL, 'documents/$id'));
-    final response = await http.patch(uri,
-        headers: {
-          'Secret': _secret!,
-          'Content-Type': 'application/octet-stream'
-        },
-        body: text);
-    if (response.statusCode == 200) {
-      return Document(text, id);
-    } else if (response.statusCode == 400 ||
-        response.statusCode == 403 ||
-        response.statusCode == 404) {
-      final responseBody = jsonDecode(response.body);
-      final errorMessage = getErrorMessage(responseBody['errorCode']);
+    final response = await http.get(uri);
 
-      throw Exception(errorMessage);
-    } else {
-      throw Exception('Unknown error while updating document.');
-    }
-  }
+    if (response.body == 'false') return false;
 
-  /// Delete a [Document] by its [id].
-  ///
-  /// [secret] must be the same as the one used to create the document. You can set it with [setSecret].
-  Future<void> deleteDocument(String id) async {
-    if (_secret == null || _secret == '') {
-      throw Exception('Secret key is required for this operation.');
-    }
-
-    final uri = Uri.parse(joinURL(URL, 'documents/$id'));
-    final response = await http.delete(uri, headers: {'Secret': _secret!});
-    if (response.statusCode == 200) {
-      return;
-    } else if (response.statusCode == 404 || response.statusCode == 403) {
-      final responseBody = jsonDecode(response.body);
-      final errorMessage = getErrorMessage(responseBody['errorCode']);
-
-      throw Exception(errorMessage);
-    } else {
-      throw Exception('Unknown error while deleting document.');
-    }
-  }
-
-  /// Set the [secret] key for the API.
-  void setSecret(String secret) {
-    _secret = secret;
+    return true;
   }
 }
 
-/// A document.
+/// A document in the JSPaste API.
 ///
-/// [text] is the document text. [id] is the document ID if it exists.
+/// You can publish a document with [JSPasteClient.publishDocument].
 class Document {
-  String text;
-  String? id;
+  String _text;
+  String? _key;
+  DateTime? _expiresAt;
+  String? _password;
+  String? _secret;
+  String? _url;
 
-  Document(this.text, this.id);
+  Document(String text, {String? password, DateTime? expiresAt, String? secret}) : _text = text {
+    if (password != null) _password = password;
+    if (expiresAt != null) _expiresAt = expiresAt;
+    if (secret != null) _secret = secret;
+  }
+  Document._fromJson(Map<String, dynamic> json)
+      : _text = json['text'],
+        _key = json['key'],
+        _expiresAt = json['expirationTimestamp'] != null
+            ? DateTime.fromMillisecondsSinceEpoch(json['expirationTimestamp'])
+            : null,
+        _secret = json['secret'],
+        _url = json['url'];
+
+  /// Get the document ID.
+  String? get key => _key;
+
+  /// Check if the document is published. (Ping the API to check.)
+  Future<bool> get isPublished async {
+    if (_key == null) return false;
+
+    final uri = joinUrl(mainApiUrl, 'documents/$_key/exists');
+
+    final response = await http.get(uri);
+
+    if (response.body == 'false') return false;
+
+    return true;
+  }
+
+  /// The document expiration date.
+  DateTime? get expiresAt => _expiresAt;
+
+  /// Set the document expiration date.
+  ///
+  /// Throws an exception if the document is already published.
+  void setExpiration(DateTime expiresAt) {
+    if (_key != null) {
+      throw Exception('Cannot set expiration date on published document.');
+    }
+
+    _expiresAt = expiresAt;
+  }
+
+  /// The document password.
+  String? get password => _password;
+
+  /// Set the document password.
+  ///
+  /// Throws an exception if the document is already published.
+  void setPassword(String password) {
+    if (_key != null) {
+      throw Exception('Cannot set password on published document.');
+    }
+
+    if (password.length > 256) {
+      throw Exception('Password cannot be longer than 256 characters.');
+    }
+    _password = password;
+  }
+
+  /// The document text.
+  String get text => _text;
+
+  /// Set the document text.
+  ///
+  /// Throws an exception if the document is already published.
+  set text(String text) {
+    if (_key != null) {
+      throw Exception(
+          'Cannot set text on published document. Use Document.update() instead.');
+    }
+
+    _text = text;
+  }
+
+  /// The document secret.
+  ///
+  /// Used to update or delete the document.
+  String? get secret => _secret;
+
+  /// Set the document secret.
+  ///
+  /// Throws an exception if the document is published with a set secret.
+  /// Only used when already published if it is a document retrieved from the API.
+  void setSecret(String secret) {
+    if (_key != null && _secret != null) {
+      throw Exception('Cannot set secret on published document.');
+    }
+
+    _secret = secret;
+  }
+
+  /// The document url.
+  String? get url => _url;
+
+  /// Update the document.
+  ///
+  /// Throws an exception if the document is not published or if no secret is set.
+  Future<void> update(text) async {
+    if (_secret == null) {
+      throw Exception('Cannot update document without secret.');
+    }
+
+    if (await isPublished) {
+      throw Exception('Cannot update unpublished document.');
+    }
+
+    final uri = joinUrl(mainApiUrl, 'documents/$_key');
+
+    final response = await http.patch(uri, body: text, headers: {
+      'Secret': _secret ?? '',
+    });
+
+    if (response.statusCode != 200) {
+      final responseBody = jsonDecode(response.body);
+
+      final errorMessage = getErrorMessage(responseBody['errorCode']);
+      throw Exception(errorMessage);
+    }
+
+    _text = text;
+
+    return;
+  }
+
+  /// Delete the document.
+  ///
+  /// Throws an exception if the document is not published or if no secret is set.
+  Future<void> delete() async {
+    if (_secret == null) {
+      throw Exception('Cannot delete document without secret.');
+    }
+
+    if (!await isPublished) {
+      throw Exception('Cannot delete unpublished document.');
+    }
+
+    final uri = joinUrl(mainApiUrl, 'documents/$_key');
+
+    final response = await http.delete(uri, headers: {
+      'Secret': _secret ?? '',
+    });
+
+    if (response.statusCode != 200) {
+      final responseBody = jsonDecode(response.body);
+
+      final errorMessage = getErrorMessage(responseBody['errorCode']);
+      throw Exception(errorMessage);
+    }
+
+    _secret = null;
+    _key = null;
+    _url = null;
+
+    return;
+  }
 }
