@@ -6,6 +6,9 @@
 
 This is a Dart library for interacting with the JSPaste API. It provides a simple way to create, retrieve, update, and delete documents on JSPaste.
 
+> ⚠️ **Note:** This library is under active development and may undergo frequent changes. It is not recommended for production use at this time. Please use with caution.
+
+
 ## Installation
 
 Head over to the [installation](https://pub.dev/packages/jspaste/install) page on pub.dev to learn how to install the library.
