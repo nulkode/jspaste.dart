@@ -27,7 +27,7 @@ Uri joinUrl(String url, String url2) {
 
   // check if the url is valid
   if (Uri.parse(joinedUrl).isAbsolute) {
-    return Uri(path: joinedUrl);
+    return Uri.parse(joinedUrl);
   } else {
     throw Exception('Invalid URL.');
   }
