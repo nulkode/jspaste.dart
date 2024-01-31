@@ -20,3 +20,7 @@
 - Updated to the latest version of the JSPaste API.
 - Added more examples.
 - More bug fixes.
+
+## 0.1.1
+
+- Fixed a bug where documents without expiration date would expire.
