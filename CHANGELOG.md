@@ -10,3 +10,13 @@
 
 - Updated to the latest version of the JSPaste API.
 - Bug fixes.
+
+## 0.1.0
+
+- Complete rewrite of the package.
+- Changed 'delete' to 'unpublish'.
+- Changed 'id' to 'key' in the API.
+- Added support for document URL.
+- Updated to the latest version of the JSPaste API.
+- Added more examples.
+- More bug fixes.
