@@ -44,6 +44,8 @@ class JSPasteClient {
     if (document.expiresAt != null) {
       headers['Lifetime'] =
           document.expiresAt!.difference(DateTime.now()).inSeconds.toString();
+    } else {
+      headers['Lifetime'] = '0';
     }
 
     if (document.secret != null) {
