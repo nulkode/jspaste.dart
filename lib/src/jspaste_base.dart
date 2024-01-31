@@ -1,7 +1,8 @@
-import 'package:http/http.dart' as http;
+import 'package:http/http.dart' show Client;
 import 'dart:convert';
 import 'constants.dart';
 import 'utils.dart';
+import 'package:meta/meta.dart';
 
 /// The JSPaste client class. Create one to start interacting with the API!
 class JSPasteClient {
@@ -17,6 +18,12 @@ class JSPasteClient {
     if (url != null) this.url = url;
   }
 
+  /// HTTP client used to make requests to the API.
+  ///
+  /// Used for testing purposes only.
+  @visibleForTesting
+  Client http = Client();
+
   /// Publish a [Document] to the JSPaste API.
   ///
   /// The document must not be published already.
@@ -28,14 +35,23 @@ class JSPasteClient {
 
     final uri = joinUrl(mainApiUrl, 'documents');
 
-    final response = await http.post(uri, body: document.text, headers: {
-      'Secret': document.secret ?? '',
-      'Password': document.password ?? '',
-      'Lifetime': (document.expiresAt != null
-              ? (document.expiresAt!.millisecondsSinceEpoch / 1000).toString()
-              : null) ??
-          '',
-    });
+    Map<String, String> headers = {};
+
+    if (document.password != null) {
+      headers['Password'] = document.password!;
+    }
+
+    if (document.expiresAt != null) {
+      headers['Lifetime'] =
+          document.expiresAt!.difference(DateTime.now()).inSeconds.toString();
+    }
+
+    if (document.secret != null) {
+      headers['Secret'] = document.secret!;
+    }
+
+    final response =
+        await http.post(uri, body: document.text, headers: headers);
 
     final responseBody = jsonDecode(response.body);
 
@@ -67,7 +83,7 @@ class JSPasteClient {
       throw Exception(errorMessage);
     }
 
-    responseBody['text'] = responseBody['text'];
+    responseBody['text'] = responseBody['data'];
 
     Document document = Document._fromJson(responseBody);
 
@@ -97,7 +113,16 @@ class Document {
   String? _secret;
   String? _url;
 
-  Document(String text, {String? password, DateTime? expiresAt, String? secret}) : _text = text {
+  // TODO: offline mode
+
+  /// HTTP client used to make requests to the API.
+  ///
+  /// Used for testing purposes only.
+  @visibleForTesting
+  Client http = Client();
+
+  Document(String text, {String? password, DateTime? expiresAt, String? secret})
+      : _text = text {
     if (password != null) _password = password;
     if (expiresAt != null) _expiresAt = expiresAt;
     if (secret != null) _secret = secret;
@@ -116,9 +141,17 @@ class Document {
 
   /// Check if the document is published. (Ping the API to check.)
   Future<bool> get isPublished async {
-    if (_key == null) return false;
+    if (_key == null) {
+      _setUnpublished();
+      return false;
+    }
 
-    final uri = joinUrl(mainApiUrl, 'documents/$_key/exists');
+    if (_expiresAt != null && _expiresAt!.isBefore(DateTime.now())) {
+      _setUnpublished();
+      return false;
+    }
+
+    final uri = joinUrl(mainApiUrl, 'documents/$key/exists');
 
     final response = await http.get(uri);
 
@@ -128,14 +161,26 @@ class Document {
   }
 
   /// The document expiration date.
+  ///
+  /// Returns null if the document does not expire.
   DateTime? get expiresAt => _expiresAt;
 
   /// Set the document expiration date.
   ///
+  /// Set to null if the document should not expire.
   /// Throws an exception if the document is already published.
-  void setExpiration(DateTime expiresAt) {
+  set expiresAt(DateTime? expiresAt) {
     if (_key != null) {
       throw Exception('Cannot set expiration date on published document.');
+    }
+
+    if (expiresAt == null) {
+      _expiresAt = null;
+      return;
+    }
+
+    if (expiresAt.isBefore(DateTime.now())) {
+      throw Exception('Expiration date cannot be in the past.');
     }
 
     _expiresAt = expiresAt;
@@ -144,12 +189,19 @@ class Document {
   /// The document password.
   String? get password => _password;
 
+  bool get isPasswordProtected => _password != null;
+
   /// Set the document password.
   ///
   /// Throws an exception if the document is already published.
-  void setPassword(String password) {
+  set password(String? password) {
     if (_key != null) {
       throw Exception('Cannot set password on published document.');
+    }
+
+    if (password == null) {
+      _password = null;
+      return;
     }
 
     if (password.length > 256) {
@@ -164,6 +216,7 @@ class Document {
   /// Set the document text.
   ///
   /// Throws an exception if the document is already published.
+  /// If you want to update a published document, use [Document.update] instead.
   set text(String text) {
     if (_key != null) {
       throw Exception(
@@ -191,24 +244,26 @@ class Document {
   }
 
   /// The document url.
-  String? get url => _url;
+  String? get url => _url; // TODO: generate the url dynamically
 
   /// Update the document.
   ///
+  /// Uses [isPublished] to check if the document is published.
   /// Throws an exception if the document is not published or if no secret is set.
-  Future<void> update(text) async {
+  Future<void> update(String text) async {
     if (_secret == null) {
       throw Exception('Cannot update document without secret.');
     }
 
-    if (await isPublished) {
+    if (!await isPublished) {
+      _setUnpublished();
       throw Exception('Cannot update unpublished document.');
     }
 
     final uri = joinUrl(mainApiUrl, 'documents/$_key');
 
     final response = await http.patch(uri, body: text, headers: {
-      'Secret': _secret ?? '',
+      'Secret': _secret!,
     });
 
     if (response.statusCode != 200) {
@@ -223,22 +278,23 @@ class Document {
     return;
   }
 
-  /// Delete the document.
+  /// Unpublish the document.
   ///
   /// Throws an exception if the document is not published or if no secret is set.
-  Future<void> delete() async {
+  Future<void> unpublish() async {
     if (_secret == null) {
       throw Exception('Cannot delete document without secret.');
     }
 
     if (!await isPublished) {
+      _setUnpublished();
       throw Exception('Cannot delete unpublished document.');
     }
 
     final uri = joinUrl(mainApiUrl, 'documents/$_key');
 
     final response = await http.delete(uri, headers: {
-      'Secret': _secret ?? '',
+      'Secret': _secret!,
     });
 
     if (response.statusCode != 200) {
@@ -248,10 +304,14 @@ class Document {
       throw Exception(errorMessage);
     }
 
-    _secret = null;
-    _key = null;
-    _url = null;
+    _setUnpublished();
 
     return;
+  }
+
+  void _setUnpublished() {
+    _key = null;
+    _secret = null;
+    _url = null;
   }
 }
