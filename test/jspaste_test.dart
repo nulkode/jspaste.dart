@@ -80,7 +80,7 @@ void main() {
       expect(document.key, null);
       expect(document.secret, null);
 
-      expect(() => document.expiresAt = DateTime.now(), returnsNormally);
+      expect(() => document.expiresAt = DateTime.now().add(Duration(days: 1)), returnsNormally);
       expect(() => document.password = 'mock_password', returnsNormally);
       expect(() => document.text = 'Mock Text', returnsNormally);
       expect(document.text, 'Mock Text');
