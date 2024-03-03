@@ -255,8 +255,6 @@ class Document {
   /// The document password.
   String? get password => _password;
 
-  bool get isPasswordProtected => _password != null;
-
   /// Set the document password.
   ///
   /// Throws an exception if the document is already published.
