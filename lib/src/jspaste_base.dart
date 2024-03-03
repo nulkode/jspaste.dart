@@ -9,7 +9,7 @@ class JSPasteClient {
   /// The API base url.
   ///
   /// Example: `https://jspaste.eu/api/v2/`
-  String url = mainApiUrl; // ignore: non_constant_identifier_names
+  String url = mainApiUrl;
 
   /// Create a new JSPaste client.
   ///
@@ -27,9 +27,14 @@ class JSPasteClient {
   /// Publish a [Document] to the JSPaste API.
   ///
   /// The document must not be published already.
+  ///
+  /// [keyLength] is the length of the generated key if a custom key is not set.
+  ///
+  /// Uses [Document.isPublished] to check if the document is published.
+  ///
   /// Returns the published [Document] including the document key, secret and url.
-  Future<Document> publishDocument(Document document) async {
-    if (await document.isPublished) {
+  Future<Document> publishDocument(Document document, {int? keyLength}) async {
+    if (await document.isPublished()) {
       throw Exception('Document is already published.');
     }
 
@@ -38,18 +43,29 @@ class JSPasteClient {
     Map<String, String> headers = {};
 
     if (document.password != null) {
-      headers['Password'] = document.password!;
+      headers['password'] = document.password!;
     }
 
     if (document.expiresAt != null) {
-      headers['Lifetime'] =
+      headers['lifetime'] =
           document.expiresAt!.difference(DateTime.now()).inSeconds.toString();
     } else {
-      headers['Lifetime'] = '0';
+      headers['lifetime'] = '0';
     }
 
     if (document.secret != null) {
-      headers['Secret'] = document.secret!;
+      headers['secret'] = document.secret!;
+    }
+
+    if (document.key != null) {
+      headers['key'] = document.key!;
+    } else if (keyLength != null) {
+      if (keyLength < 2 || keyLength > 32) {
+        throw Exception(
+            'The key length must be between 2 and 32 characters long.');
+      }
+
+      headers['key-length'] = keyLength.toString();
     }
 
     final response =
@@ -72,11 +88,18 @@ class JSPasteClient {
   /// Get a [Document] from the JSPaste API.
   ///
   /// [key] is the document ID.
+  ///
   /// [password] is the document password if the document is password protected.
   Future<Document> getDocument(String key, {String? password}) async {
     final uri = joinUrl(mainApiUrl, 'documents/$key');
 
-    final response = await http.get(uri);
+    Map<String, String> headers = {};
+
+    if (password is String) {
+      headers['password'] = password;
+    }
+
+    final response = await http.get(uri, headers: headers);
 
     final responseBody = jsonDecode(response.body);
 
@@ -114,6 +137,7 @@ class Document {
   String? _password;
   String? _secret;
   String? _url;
+  bool _published = false;
 
   // TODO: offline mode
 
@@ -136,22 +160,61 @@ class Document {
             ? DateTime.fromMillisecondsSinceEpoch(json['expirationTimestamp'])
             : null,
         _secret = json['secret'],
-        _url = json['url'];
+        _url = json['url'],
+        _published = true;
 
   /// Get the document ID.
   String? get key => _key;
 
-  /// Check if the document is published. (Ping the API to check.)
-  Future<bool> get isPublished async {
-    if (_key == null) {
-      _setUnpublished();
+  /// Set a custom key for an unpublished document.
+  set key(String? key) {
+    if (_key != null) {
+      throw Exception('Cannot set custom key on published document.');
+    }
+
+    if (key == null) {
+      _key = key;
+      return;
+    }
+
+    if (key.length < 2 || key.length > 32) {
+      throw Exception('The key length must be between 2 and 32 characters long.');
+    }
+
+    if (!isAlphaNumeric(key)) {
+      throw Exception('The key must be alphanumeric.');
+    }
+
+    _key = key;
+  }
+
+  /// Check if the document is published.
+  ///
+  /// By default, before connecting to the API, it performs some checks, such as checking whether
+  /// the expiration date of the document has already passed. If you want to omit this checks, set
+  /// [forceOnlineCheck] to true.
+  ///
+  /// If you don't want to connect to the API, set [offlineMode] to true.
+  ///
+  /// By default, if the document is not published (as it has expired or the API has answered that
+  /// it doesn't), then the document will nullify some fields such as [Document.secret] or
+  /// [Document.url] if they aren't null yet. If you want to preserve this data, set [nullify] to false.
+  Future<bool> isPublished(
+      {bool offlineMode = false,
+      bool forceOnlineCheck = false,
+      nullify = true}) async {
+    if (!forceOnlineCheck && (_published || _key == null)) {
+      _setUnpublished(nullify: nullify);
       return false;
     }
 
-    if (_expiresAt != null && _expiresAt!.isBefore(DateTime.now())) {
-      _setUnpublished();
+    if (!forceOnlineCheck &&
+        (_expiresAt != null && _expiresAt!.isBefore(DateTime.now()))) {
+      if (nullify) _setUnpublished();
       return false;
     }
+
+    if (offlineMode) return true;
 
     final uri = joinUrl(mainApiUrl, 'documents/$key/exists');
 
@@ -170,9 +233,10 @@ class Document {
   /// Set the document expiration date.
   ///
   /// Set to null if the document should not expire.
+  ///
   /// Throws an exception if the document is already published.
   set expiresAt(DateTime? expiresAt) {
-    if (_key != null) {
+    if (_published) {
       throw Exception('Cannot set expiration date on published document.');
     }
 
@@ -197,7 +261,7 @@ class Document {
   ///
   /// Throws an exception if the document is already published.
   set password(String? password) {
-    if (_key != null) {
+    if (_published) {
       throw Exception('Cannot set password on published document.');
     }
 
@@ -218,6 +282,7 @@ class Document {
   /// Set the document text.
   ///
   /// Throws an exception if the document is already published.
+  ///
   /// If you want to update a published document, use [Document.update] instead.
   set text(String text) {
     if (_key != null) {
@@ -236,10 +301,20 @@ class Document {
   /// Set the document secret.
   ///
   /// Throws an exception if the document is published with a set secret.
+  ///
   /// Only used when already published if it is a document retrieved from the API.
-  void setSecret(String secret) {
-    if (_key != null && _secret != null) {
+  set secret(String? secret) {
+    if (_published) {
       throw Exception('Cannot set secret on published document.');
+    }
+
+    if (secret == null) {
+      _secret == null;
+      return;
+    }
+
+    if (secret.isEmpty || secret.length > 255) {
+      throw Exception('The key length must be between 2 and 255 characters long.');
     }
 
     _secret = secret;
@@ -250,15 +325,15 @@ class Document {
 
   /// Update the document.
   ///
-  /// Uses [isPublished] to check if the document is published.
+  /// Uses [isPublished] to check if the document is published. The argument [nullify] is passed to this function.
+  ///
   /// Throws an exception if the document is not published or if no secret is set.
-  Future<void> update(String text) async {
+  Future<void> update(String text, {bool nullify = true}) async {
     if (_secret == null) {
       throw Exception('Cannot update document without secret.');
     }
 
-    if (!await isPublished) {
-      _setUnpublished();
+    if (!await isPublished(nullify: nullify)) {
       throw Exception('Cannot update unpublished document.');
     }
 
@@ -282,14 +357,19 @@ class Document {
 
   /// Unpublish the document.
   ///
+  /// Uses [isPublished] to check if the document is published. The argument [nullify] is passed to this
+  /// function.
+  ///
+  /// The function will nullify some fields such as [Document.secret] or [Document.url] if they aren't
+  /// null yet. [nullify] set to true will also prevent this.
+  ///
   /// Throws an exception if the document is not published or if no secret is set.
-  Future<void> unpublish() async {
+  Future<void> unpublish({bool nullify = false}) async {
     if (_secret == null) {
       throw Exception('Cannot delete document without secret.');
     }
 
-    if (!await isPublished) {
-      _setUnpublished();
+    if (!await isPublished(nullify: nullify)) {
       throw Exception('Cannot delete unpublished document.');
     }
 
@@ -306,14 +386,16 @@ class Document {
       throw Exception(errorMessage);
     }
 
-    _setUnpublished();
+    _setUnpublished(nullify: nullify);
 
     return;
   }
 
-  void _setUnpublished() {
-    _key = null;
-    _secret = null;
-    _url = null;
+  void _setUnpublished({bool nullify = true}) {
+    _published = false;
+    if (nullify) {
+      _secret = null;
+      _url = null;
+    }
   }
 }

@@ -32,3 +32,8 @@ Uri joinUrl(String url, String url2) {
     throw Exception('Invalid URL.');
   }
 }
+
+bool isAlphaNumeric(String str) {
+  final alphanumericRegExp = RegExp(r'^[a-zA-Z0-9]+$');
+  return alphanumericRegExp.hasMatch(str);
+}
