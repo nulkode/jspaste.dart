@@ -17,6 +17,19 @@ void main() async {
   // Update the document text.
   await document.update('Hello, World! This is an edit.');
 
+  // Get a document.
+  try {
+    final document =
+        await apiClient.getDocument('document-key', password: 'password');
+    print(document.text);
+
+    // Update the document text.
+    document.secret = 'aaaaa-bbbbb-ccccc-ddddd';
+    await document.update('Hello, World! This is an edit.');
+  } catch (e) {
+    print(e);
+  }
+
   // Unpublish the document.
   await document.unpublish();
 }
