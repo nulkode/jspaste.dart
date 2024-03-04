@@ -21,8 +21,10 @@ enum JSPErrorCode {
       'jsp.document.invalid_secret', 'The secret is invalid.'),
   documentInvalidSecretLength(
       'jsp.document.invalid_secret_length', 'The secret length is invalid.'),
-  documentInvalidKeyLength('jsp.document.invalid_key_length', 'The key length is invalid.'),
-  documentKeyAlreadyExists('jsp.document.key_already_exists', 'The key already exists.');
+  documentInvalidKeyLength(
+      'jsp.document.invalid_key_length', 'The key length is invalid.'),
+  documentKeyAlreadyExists(
+      'jsp.document.key_already_exists', 'The key already exists.');
 
   final String string;
   final String message;

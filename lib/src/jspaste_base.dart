@@ -178,7 +178,8 @@ class Document {
     }
 
     if (key.length < 2 || key.length > 32) {
-      throw Exception('The key length must be between 2 and 32 characters long.');
+      throw Exception(
+          'The key length must be between 2 and 32 characters long.');
     }
 
     if (!isAlphaNumeric(key)) {
@@ -312,7 +313,8 @@ class Document {
     }
 
     if (secret.isEmpty || secret.length > 255) {
-      throw Exception('The key length must be between 2 and 255 characters long.');
+      throw Exception(
+          'The key length must be between 2 and 255 characters long.');
     }
 
     _secret = secret;
