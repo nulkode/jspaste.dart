@@ -19,7 +19,7 @@ void main() {
 
       final document = Document('Mock Text');
 
-      expect(await document.isPublished, false);
+      expect(await document.isPublished(), false);
 
       final publishedDocument = await apiClient.publishDocument(document);
 
@@ -76,7 +76,7 @@ void main() {
     });
 
     test('Document should be not published and fields can be set', () async {
-      expect(await document.isPublished, false);
+      expect(await document.isPublished(), false);
       expect(document.key, null);
       expect(document.secret, null);
 
@@ -85,7 +85,7 @@ void main() {
       expect(() => document.password = 'mock_password', returnsNormally);
       expect(() => document.text = 'Mock Text', returnsNormally);
       expect(document.text, 'Mock Text');
-      expect(() => document.setSecret('mock_secret'), returnsNormally);
+      expect(() => document.secret = 'mock_secret', returnsNormally);
     });
 
     test('Document should be published and fields cannot be set', () async {
@@ -103,7 +103,7 @@ void main() {
         }
       });
 
-      expect(await publishedDocument.isPublished, true);
+      expect(await publishedDocument.isPublished(), true);
       expect(publishedDocument.key, 'mock_key');
       expect(publishedDocument.secret, 'mock_secret');
 
@@ -114,7 +114,7 @@ void main() {
       expect(() => publishedDocument.text = 'Mock Text',
           throwsA(isA<Exception>()));
       expect(publishedDocument.text, 'Mock Text');
-      expect(() => publishedDocument.setSecret('mock_secret'),
+      expect(() => publishedDocument.secret = 'mock_secret',
           throwsA(isA<Exception>()));
     });
 
