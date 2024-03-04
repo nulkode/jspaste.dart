@@ -203,7 +203,7 @@ class Document {
       {bool offlineMode = false,
       bool forceOnlineCheck = false,
       nullify = true}) async {
-    if (!forceOnlineCheck && (_published || _key == null)) {
+    if (!forceOnlineCheck && (!_published || _key == null)) {
       _setUnpublished(nullify: nullify);
       return false;
     }
@@ -220,9 +220,9 @@ class Document {
 
     final response = await http.get(uri);
 
-    if (response.body == 'false') return false;
+    if (response.body == 'true') return true;
 
-    return true;
+    return false;
   }
 
   /// The document expiration date.
