@@ -6,7 +6,7 @@ enum JSPErrorCode {
   validationFailed('jsp.validation_failed', 'The validation failed.'),
   internalServerError(
       'jsp.internal_server_error', 'An internal server error occurred.'),
-  parseInvalid('jsp.parse.invalid', 'Failed to parse the request.'),
+  parseInvalid('jsp.parse_failed', 'Failed to parse the request.'),
   inputInvalid('jsp.input.invalid', 'The input is invalid.'),
   documentNotFound('jsp.document.not_found', 'The document was not found.'),
   documentPasswordNeeded(
@@ -20,7 +20,9 @@ enum JSPErrorCode {
   documentInvalidSecret(
       'jsp.document.invalid_secret', 'The secret is invalid.'),
   documentInvalidSecretLength(
-      'jsp.document.invalid_secret_length', 'The secret length is invalid.');
+      'jsp.document.invalid_secret_length', 'The secret length is invalid.'),
+  documentInvalidKeyLength('jsp.document.invalid_key_length', 'The key length is invalid.'),
+  documentKeyAlreadyExists('jsp.document.key_already_exists', 'The key already exists.');
 
   final String string;
   final String message;
