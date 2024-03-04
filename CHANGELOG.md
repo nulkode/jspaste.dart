@@ -24,3 +24,15 @@
 ## 0.1.1
 
 - Fixed a bug where documents without expiration date would expire.
+
+## 0.2.0
+
+- Support for custom key or custom key length.
+- More documentation.
+- Removed useless functions.
+- Bug fixes.
+
+BREAKING CHANGES:
+- `isPublished` is now a function.
+- `setSecret` is no longer a function. `secret` is now setted as a normal property.
+- `Document.isPasswordProtected` no longer exists. ([e149a0a](https://github.com/nulkode/jspaste.dart/commit/e149a0add5ff4969e2abb9184aeaf68414887e2e))

@@ -1,6 +1,6 @@
 name: jspaste
 description: A future-based null-safe modern Dart library to interact with the JSPaste API.
-version: 0.1.1
+version: 0.2.0
 repository: https://github.com/nulkode/jspaste.dart
 
 environment:
